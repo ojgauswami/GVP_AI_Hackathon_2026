@@ -65,56 +65,86 @@ class Student:
         }
 
 
+
+from core.database import db_session
+from core.models import StudentModel
+from sqlalchemy.orm.exc import NoResultFound
+
 class StudentManager:
-    """Manages student entities with uniqueness constraints."""
+    """Manages student entities with database persistence."""
     
     def __init__(self):
-        self._students: Dict[str, Student] = {}
+        pass  # Session is handled via scoped_session
     
-    def add_student(self, roll_number: str, name: str, semester: int) -> Student:
-        """Add a new student with validation."""
-        student = Student(roll_number, name, semester)
+    def add_student(self, roll_number: str, name: str, semester: int) -> StudentModel:
+        """Add a new student with validation and persistence."""
+        # Validation Logic (Moved from Student class or reused)
+        if not roll_number or not isinstance(roll_number, str):
+            raise ValueError("Roll number must be a non-empty string")
+        roll_number = roll_number.strip().upper()
+        if not re.match(r'^[A-Z0-9]{4,15}$', roll_number):
+            raise ValueError("Roll number must be 4-15 alphanumeric characters")
+            
+        if not name or not isinstance(name, str):
+             raise ValueError("Name must be a non-empty string")
+        name = name.strip()
+        if len(name) < 2 or len(name) > 100:
+             raise ValueError("Name must be between 2 and 100 characters")
+             
+        if not isinstance(semester, int) or semester < 1 or semester > 8:
+             raise ValueError("Semester must be between 1 and 8")
+
+        # Check existing
+        existing = db_session.query(StudentModel).filter_by(roll_number=roll_number).first()
+        if existing:
+            raise ValueError(f"Student with roll number {roll_number} already exists")
         
-        if student.roll_number in self._students:
-            raise ValueError(f"Student with roll number {student.roll_number} already exists")
-        
-        self._students[student.roll_number] = student
+        student = StudentModel(roll_number=roll_number, name=name, semester=semester)
+        db_session.add(student)
+        db_session.commit()
         return student
     
-    def get_student(self, roll_number: str) -> Optional[Student]:
+    def get_student(self, roll_number: str) -> Optional[StudentModel]:
         """Retrieve student by roll number."""
-        return self._students.get(roll_number.strip().upper())
+        return db_session.query(StudentModel).filter_by(roll_number=roll_number.strip().upper()).first()
     
     def update_student(self, roll_number: str, name: Optional[str] = None, 
-                      semester: Optional[int] = None) -> Student:
+                      semester: Optional[int] = None) -> StudentModel:
         """Update student attributes."""
         student = self.get_student(roll_number)
         if not student:
             raise ValueError(f"Student with roll number {roll_number} not found")
         
         if name is not None:
-            student.name = Student._validate_name(name)
+            if not name or len(name.strip()) < 2:
+                raise ValueError("Name too short")
+            student.name = name.strip()
+            
         if semester is not None:
-            student.semester = Student._validate_semester(semester)
+             if semester < 1 or semester > 8:
+                raise ValueError("Invalid semester")
+             student.semester = semester
         
+        db_session.commit()
         return student
     
     def remove_student(self, roll_number: str) -> bool:
         """Remove student from system."""
-        roll_number = roll_number.strip().upper()
-        if roll_number in self._students:
-            del self._students[roll_number]
+        student = self.get_student(roll_number)
+        if student:
+            db_session.delete(student)
+            db_session.commit()
             return True
         return False
     
-    def get_all_students(self) -> List[Student]:
+    def get_all_students(self) -> List[StudentModel]:
         """Get all students."""
-        return list(self._students.values())
+        return db_session.query(StudentModel).all()
     
-    def get_students_by_semester(self, semester: int) -> List[Student]:
+    def get_students_by_semester(self, semester: int) -> List[StudentModel]:
         """Get students filtered by semester."""
-        return [s for s in self._students.values() if s.semester == semester]
+        return db_session.query(StudentModel).filter_by(semester=semester).all()
     
     def student_count(self) -> int:
         """Get total number of students."""
-        return len(self._students)
+        return db_session.query(StudentModel).count()

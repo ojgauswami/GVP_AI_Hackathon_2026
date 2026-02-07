@@ -169,6 +169,7 @@ def delete_student(roll_number):
     return jsonify({'error': 'Student not found'}), 404
 
 
+
 @app.route('/api/system/pulse', methods=['GET'])
 def system_pulse():
     """Get system-wide intelligence metrics."""
@@ -202,6 +203,142 @@ def system_pulse():
         'system_insights': insights
     })
 
+@app.route('/api/data/export', methods=['GET'])
+def export_data():
+    """Export all student data to JSON."""
+    students = student_manager.get_all_students()
+    export_list = []
+    
+    for student in students:
+        attendance = attendance_manager.get_attendance(student.roll_number)
+        performance = performance_manager.get_performance(student.roll_number)
+        
+        data = {
+            'roll_number': student.roll_number,
+            'name': student.name,
+            'semester': student.semester,
+            'attendance': attendance.to_dict() if attendance else None,
+            'performance': performance.to_dict() if performance else None
+        }
+        export_list.append(data)
+        
+    return jsonify(export_list)
+
+@app.route('/api/data/import', methods=['POST'])
+def import_data():
+    """Import student data from JSON."""
+    try:
+        items = request.get_json()
+        if not items or not isinstance(items, list):
+            return jsonify({'error': 'Invalid format, expected list'}), 400
+            
+        success_count = 0
+        errors = []
+        
+        for i, item in enumerate(items):
+            try:
+                # Basic validation
+                if not all(k in item for k in ('roll_number', 'name', 'semester')):
+                    continue
+                
+                try:
+                    student_manager.add_student(item['roll_number'], item['name'], int(item['semester']))
+                except ValueError:
+                    student_manager.update_student(item['roll_number'], name=item['name'], semester=int(item['semester']))
+                
+                # Attendance
+                att = item.get('attendance')
+                if att:
+                    attendance_manager.set_attendance(
+                        item['roll_number'],
+                        int(att.get('total_lectures', 0)),
+                        int(att.get('attended_lectures', 0))
+                    )
+                
+                # Performance
+                perf = item.get('performance')
+                if perf:
+                    marks = float(perf.get('marks', 0))
+                    performance_manager.update_marks(item['roll_number'], marks)
+                
+                success_count += 1
+            except Exception as e:
+                errors.append(f"Row {i}: {str(e)}")
+                
+        return jsonify({'success': True, 'imported': success_count, 'errors': errors})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/data/upload', methods=['POST'])
+def upload_csv():
+    """Import students from CSV file."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+            
+        if not file.filename.endswith('.csv'):
+            return jsonify({'error': 'File must be CSV'}), 400
+            
+        import csv
+        import io
+        
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.DictReader(stream)
+        
+        success_count = 0
+        errors = []
+        
+        for i, row in enumerate(csv_input):
+            try:
+                clean_row = {k.strip().lower(): v for k, v in row.items() if k}
+                
+                def get_val(keys, default=None):
+                    for k in keys:
+                        if k in clean_row:
+                            return clean_row[k]
+                    return default
+                
+                roll = get_val(['roll number', 'roll_number', 'roll', 'id'])
+                name = get_val(['name', 'student name', 'fullname'])
+                sem = get_val(['semester', 'sem'])
+                
+                if not (roll and name and sem):
+                    raise ValueError("Missing required fields")
+                
+                try:
+                    student_manager.add_student(roll, name, int(sem))
+                except ValueError:
+                    student_manager.update_student(roll, name=name, semester=int(sem))
+                
+                total = int(get_val(['total lectures', 'total_lectures', 'total'], 0))
+                attended = int(get_val(['attended lectures', 'attended_lectures', 'attended'], 0))
+                attendance_manager.set_attendance(roll, total, attended)
+                
+                marks = get_val(['marks', 'score', 'percentage', 'grade'])
+                if marks:
+                    performance_manager.update_marks(roll, float(marks))
+                    
+                success_count += 1
+                
+            except Exception as e:
+                errors.append(f"Row {i+1}: {str(e)}")
+        
+        return jsonify({'success': True, 'imported': success_count, 'errors': errors})
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+from core.database import init_db, db_session
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db_session.remove()
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)

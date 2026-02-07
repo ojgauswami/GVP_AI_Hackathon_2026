@@ -15,14 +15,41 @@ class AttendanceRisk(Enum):
     EXCELLENT = "excellent"  # Above 90%
 
 
+
+from core.database import db_session
+from core.models import AttendanceModel, StudentModel
+from sqlalchemy.orm.exc import NoResultFound
+
 class AttendanceData:
-    """Attendance intelligence for a student."""
+    """Attendance intelligence wrapper around DB model."""
     
-    def __init__(self, total_lectures: int = 0, attended_lectures: int = 0):
-        self.total_lectures = max(0, total_lectures)
-        self.attended_lectures = max(0, min(attended_lectures, total_lectures))
-        self._previous_percentage = None
+    def __init__(self, model: AttendanceModel):
+        self._model = model
     
+    @property
+    def total_lectures(self) -> int:
+        return self._model.total_lectures
+    
+    @total_lectures.setter
+    def total_lectures(self, value: int):
+        self._model.total_lectures = value
+
+    @property
+    def attended_lectures(self) -> int:
+        return self._model.attended_lectures
+    
+    @attended_lectures.setter
+    def attended_lectures(self, value: int):
+        self._model.attended_lectures = value
+
+    @property
+    def _previous_percentage(self) -> Optional[float]:
+        return self._model.previous_percentage
+
+    @_previous_percentage.setter
+    def _previous_percentage(self, value: float):
+        self._model.previous_percentage = value
+
     @property
     def attendance_percentage(self) -> float:
         """Calculate attendance percentage."""
@@ -38,7 +65,6 @@ class AttendanceData:
         if percentage < 75:
             return AttendanceRisk.CRITICAL
         
-        # Trend analysis
         if self._previous_percentage is not None:
             trend = percentage - self._previous_percentage
             if percentage < 80 and trend < 0:
@@ -72,13 +98,11 @@ class AttendanceData:
         if self.attendance_percentage >= threshold:
             return 0
         
-        # Calculate: (attended + x) / (total + x) >= threshold/100
-        # Solving: x >= (threshold * total - 100 * attended) / (100 - threshold)
         numerator = threshold * self.total_lectures - 100 * self.attended_lectures
         denominator = 100 - threshold
         
         if denominator == 0:
-            return -1  # Impossible
+            return -1
         
         needed = numerator / denominator
         return max(0, int(needed) + 1)
@@ -96,61 +120,81 @@ class AttendanceData:
 
 
 class AttendanceManager:
-    """Manages attendance intelligence across students."""
+    """Manages attendance intelligence across students with DB persistence."""
     
     def __init__(self):
-        self._attendance_records: Dict[str, AttendanceData] = {}
+        pass
     
     def initialize_attendance(self, roll_number: str, 
                             total: int = 0, attended: int = 0) -> AttendanceData:
         """Initialize attendance for a student."""
         roll_number = roll_number.strip().upper()
-        attendance = AttendanceData(total, attended)
-        self._attendance_records[roll_number] = attendance
-        return attendance
+        
+        # Check if exists
+        attendance = db_session.query(AttendanceModel).filter_by(student_roll=roll_number).first()
+        if not attendance:
+            attendance = AttendanceModel(student_roll=roll_number, total_lectures=total, attended_lectures=attended)
+            db_session.add(attendance)
+        else:
+            attendance.total_lectures = total
+            attendance.attended_lectures = attended
+            
+        db_session.commit()
+        return AttendanceData(attendance)
     
     def get_attendance(self, roll_number: str) -> Optional[AttendanceData]:
         """Get attendance data for student."""
-        return self._attendance_records.get(roll_number.strip().upper())
+        roll_number = roll_number.strip().upper()
+        attendance = db_session.query(AttendanceModel).filter_by(student_roll=roll_number).first()
+        if attendance:
+            return AttendanceData(attendance)
+        return None
     
     def update_attendance(self, roll_number: str, attended: bool):
         """Update attendance record."""
-        roll_number = roll_number.strip().upper()
-        if roll_number not in self._attendance_records:
-            self._attendance_records[roll_number] = AttendanceData()
-        
-        self._attendance_records[roll_number].update_attendance(attended)
-    
+        data = self.get_attendance(roll_number)
+        if data:
+            data.update_attendance(attended)
+            db_session.commit()
+        else:
+             # Create new if missing? Usually initialize should be called first.
+             # But let's support lazy creation
+             self.initialize_attendance(roll_number, total=0, attended=0)
+             self.update_attendance(roll_number, attended)
+
     def set_attendance(self, roll_number: str, total: int, attended: int):
         """Set attendance data directly."""
-        roll_number = roll_number.strip().upper()
-        if roll_number not in self._attendance_records:
-            self._attendance_records[roll_number] = AttendanceData()
-        
-        self._attendance_records[roll_number].set_attendance(total, attended)
+        data = self.get_attendance(roll_number)
+        if data:
+            data.set_attendance(total, attended)
+            db_session.commit()
+        else:
+            self.initialize_attendance(roll_number, total, attended)
     
     def get_overall_health(self) -> Tuple[float, int, int]:
         """
         Calculate overall attendance health across all students.
-        Returns: (average_percentage, at_risk_count, total_count)
         """
-        if not self._attendance_records:
+        attendances = db_session.query(AttendanceModel).all()
+        if not attendances:
             return 0.0, 0, 0
-        
+            
         total_percentage = 0.0
         at_risk_count = 0
         
-        for attendance in self._attendance_records.values():
-            total_percentage += attendance.attendance_percentage
-            if attendance.is_at_risk:
+        for model in attendances:
+            data = AttendanceData(model)
+            total_percentage += data.attendance_percentage
+            if data.is_at_risk:
                 at_risk_count += 1
         
-        avg_percentage = total_percentage / len(self._attendance_records)
-        return round(avg_percentage, 2), at_risk_count, len(self._attendance_records)
+        avg_percentage = total_percentage / len(attendances)
+        return round(avg_percentage, 2), at_risk_count, len(attendances)
     
     def get_at_risk_students(self) -> list:
         """Get list of roll numbers for at-risk students."""
+        attendances = db_session.query(AttendanceModel).all()
         return [
-            roll_num for roll_num, attendance in self._attendance_records.items()
-            if attendance.is_at_risk
+            a.student_roll for a in attendances
+            if AttendanceData(a).is_at_risk
         ]
