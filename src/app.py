@@ -72,7 +72,9 @@ def add_student():
         # Initialize attendance and performance
         total_lectures = data.get('total_lectures', 0)
         attended_lectures = data.get('attended_lectures', 0)
-        marks = data.get('marks', 0)
+        marks = data.get('marks')
+        if marks is None or marks == '':
+            marks = 0
         
         attendance = attendance_manager.initialize_attendance(
             student.roll_number, 
