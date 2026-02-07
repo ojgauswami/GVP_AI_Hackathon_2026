@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Academic Pulse{% endblock %}
+{% block title %}Gujarat Vidyapith Academic Pulse{% endblock %}
 
 {% block content %}
 <main class="dashboard">
     <section class="pulse-section">
         <header class="pulse-header">
-            <h1 class="pulse-title">Academic Pulse</h1>
+            <div class="header-brand">
+                <img src="{{ url_for('static', filename='img/gvp-logo.jpg') }}" alt="GVP Logo" class="institution-logo">
+                <h1 class="pulse-title">Gujarat Vidyapith Academic Pulse</h1>
+            </div>
             <button class="btn btn-primary" id="add-student-btn">Add Student</button>
         </header>
 
