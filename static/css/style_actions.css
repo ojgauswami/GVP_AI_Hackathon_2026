@@ -1,0 +1,78 @@
+﻿
+/* ========== STUDENT CARD ACTIONS ========== */
+.student-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.btn-edit,
+.btn-delete {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: transparent;
+    color: var(--color-text-tertiary);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-edit::before,
+.btn-delete::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.btn-edit:hover::before {
+    opacity: 0.08;
+}
+
+.btn-delete:hover::before {
+    opacity: 0.08;
+}
+
+.btn-edit {
+    color: var(--color-primary);
+}
+
+.btn-delete {
+    color: var(--color-text-tertiary);
+}
+
+.btn-edit:hover {
+    color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.btn-delete:hover {
+    color: var(--color-critical);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.btn-edit:active,
+.btn-delete:active {
+    transform: translateY(0);
+}
+
+.btn-edit span,
+.btn-delete span {
+    position: relative;
+    z-index: 1;
+}
+

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Pulse{% endblock %}
+
+{% block content %}
+<main class="dashboard">
+    <section class="pulse-section">
+        <header class="pulse-header">
+            <h1 class="pulse-title">Academic Pulse</h1>
+            <button class="btn btn-primary" id="add-student-btn">Add Student</button>
+        </header>
+
+        <div class="pulse-metrics" id="pulse-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total Students</div>
+                <div class="metric-value" id="total-students">0</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Attendance Health</div>
+                <div class="metric-value" id="attendance-health">0%</div>
+                <div class="metric-indicator" id="attendance-indicator"></div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Requires Review</div>
+                <div class="metric-value risk" id="at-risk-count">0</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Avg Performance</div>
+                <div class="metric-value" id="avg-performance">0</div>
+            </div>
+        </div>
+
+        <div class="system-insights" id="system-insights"></div>
+    </section>
+
+    <section class="students-section">
+        <header class="section-header">
+            <h2>Students</h2>
+            <div class="filter-controls" id="filter-controls">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="critical">Below Threshold</button>
+                <button class="filter-btn" data-filter="warning">Requires Review</button>
+            </div>
+        </header>
+
+        <div class="students-list" id="students-list"></div>
+
+        <div class="empty-state" id="empty-state">
+            <p class="empty-message">No students in system.</p>
+            <p class="empty-hint">Add students to begin tracking.</p>
+        </div>
+    </section>
+
+    <aside class="side-panel" id="add-student-panel">
+        <div class="panel-overlay" id="panel-overlay"></div>
+        <div class="panel-content">
+            <header class="panel-header">
+                <h2 class="panel-title">Add Student</h2>
+                <button class="panel-close" id="panel-close">&times;</button>
+            </header>
+
+            <form class="student-form" id="student-form">
+                <div class="form-group">
+                    <label for="roll-number">Roll Number</label>
+                    <input type="text" id="roll-number" name="roll_number" placeholder="e.g., CS2026001" required>
+                    <span class="form-hint">4-15 alphanumeric characters</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" placeholder="Student name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="semester">Semester</label>
+                    <select id="semester" name="semester" required>
+                        <option value="">Select semester</option>
+                        <option value="1">Semester 1</option>
+                        <option value="2">Semester 2</option>
+                        <option value="3">Semester 3</option>
+                        <option value="4">Semester 4</option>
+                        <option value="5">Semester 5</option>
+                        <option value="6">Semester 6</option>
+                        <option value="7">Semester 7</option>
+                        <option value="8">Semester 8</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="total-lectures">Total Lectures</label>
+                    <input type="number" id="total-lectures" name="total_lectures" min="0" max="200" placeholder="Leave empty if not available">
+                </div>
+
+                <div class="form-group">
+                    <label for="attended-lectures">Attended Lectures</label>
+                    <input type="number" id="attended-lectures" name="attended_lectures" min="0" max="200" placeholder="Leave empty if not available">
+                </div>
+
+                <div class="form-group">
+                    <label for="marks">Marks</label>
+                    <input type="number" id="marks" name="marks" min="0" max="100" step="0.01" placeholder="Leave empty if not available">
+                </div>
+
+                <div class="form-error" id="form-error"></div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Student</button>
+                </div>
+            </form>
+        </div>
+    </aside>
+</main>
+{% endblock %}
