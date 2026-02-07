@@ -132,7 +132,7 @@ def update_student(roll_number):
             )
         
         # Update performance if provided
-        if 'marks' in data:
+        if 'marks' in data and data['marks'] != '':
             performance_manager.update_marks(roll_number, float(data['marks']))
         
         # Retrieve updated data
