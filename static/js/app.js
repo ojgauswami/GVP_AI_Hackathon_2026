@@ -199,7 +199,7 @@ class AcademicEngine {
                     
                     <div class="metric-item">
                         <div class="metric-item-label">Performance</div>
-                        <div class="metric-item-value">${performance.marks || 0}</div>
+                        <div class="metric-item-value">${performance.marks === 0 ? 'Awaiting Data' : performance.marks || 0}</div>
                         <div class="progress-bar">
                             <div class="progress-fill" style="--progress-width: ${performance.marks || 0}%; --progress-color: ${performanceColor}"></div>
                         </div>
