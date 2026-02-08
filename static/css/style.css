@@ -922,3 +922,64 @@ h4 {
         height: 40px;
     }
 }
+/* Mobile responsive fixes for header actions */
+@media (max-width: 768px) {
+    .header-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+
+    .header-actions .btn {
+        width: 100%;
+        justify-content: center;
+        min-height: 44px;
+        font-size: var(--font-size-sm);
+    }
+}
+/* Tablet responsive - 2 column button layout */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .header-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-sm);
+    }
+
+    .header-actions .btn {
+        min-height: 44px;
+    }
+
+    .header-actions .btn:last-child {
+        grid-column: 1 / -1;
+    }
+}
+/* Better mobile header layout */
+@media (max-width: 768px) {
+    .header-brand {
+        flex-direction: row !important;
+        align-items: center !important;
+        width: 100%;
+    }
+
+    .institution-logo {
+        height: 32px;
+    }
+
+    .pulse-title {
+        font-size: var(--font-size-lg) !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+/* Smaller phones */
+@media (max-width: 480px) {
+    .pulse-title {
+        font-size: var(--font-size-base) !important;
+    }
+
+    .institution-logo {
+        height: 28px;
+    }
+}
