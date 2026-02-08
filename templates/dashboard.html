@@ -10,8 +10,20 @@
                 <img src="{{ url_for('static', filename='img/gvp-logo.jpg') }}" alt="GVP Logo" class="institution-logo">
                 <h1 class="pulse-title">Gujarat Vidyapith Academic Pulse</h1>
             </div>
-            <button class="btn btn-primary" id="add-student-btn">Add Student</button>
+            <div class="header-actions">
+                <button class="btn btn-secondary" id="export-data-btn" title="Export all data as JSON">Export
+                    Data</button>
+                <button class="btn btn-secondary" id="import-data-btn" title="Import data from JSON">Import
+                    JSON</button>
+                <button class="btn btn-secondary" id="upload-csv-btn" title="Upload students from CSV">Upload
+                    CSV</button>
+                <button class="btn btn-primary" id="add-student-btn">Add Student</button>
+            </div>
         </header>
+
+        <!-- Hidden file inputs for import/upload -->
+        <input type="file" id="import-json-file" accept=".json" style="display: none;">
+        <input type="file" id="upload-csv-file" accept=".csv" style="display: none;">
 
         <div class="pulse-metrics" id="pulse-metrics">
             <div class="metric-card">

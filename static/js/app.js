@@ -13,6 +13,11 @@ class AcademicEngine {
 
         this.elements = {
             addStudentBtn: document.getElementById('add-student-btn'),
+            exportDataBtn: document.getElementById('export-data-btn'),
+            importDataBtn: document.getElementById('import-data-btn'),
+            uploadCsvBtn: document.getElementById('upload-csv-btn'),
+            importJsonFile: document.getElementById('import-json-file'),
+            uploadCsvFile: document.getElementById('upload-csv-file'),
             panel: document.getElementById('add-student-panel'),
             panelOverlay: document.getElementById('panel-overlay'),
             panelClose: document.getElementById('panel-close'),
@@ -38,6 +43,14 @@ class AcademicEngine {
         this.elements.panelClose.addEventListener('click', () => this.closePanel());
         this.elements.cancelBtn.addEventListener('click', () => this.closePanel());
         this.elements.panelOverlay.addEventListener('click', () => this.closePanel());
+
+        // Data management
+        this.elements.exportDataBtn.addEventListener('click', () => this.exportData());
+        this.elements.importDataBtn.addEventListener('click', () => this.elements.importJsonFile.click());
+        this.elements.uploadCsvBtn.addEventListener('click', () => this.elements.uploadCsvFile.click());
+
+        this.elements.importJsonFile.addEventListener('change', (e) => this.handleImportJson(e));
+        this.elements.uploadCsvFile.addEventListener('change', (e) => this.handleUploadCsv(e));
 
         // Form submission
         this.elements.studentForm.addEventListener('submit', (e) => {
@@ -384,6 +397,89 @@ class AcademicEngine {
             await this.loadData();
         } catch (error) {
             alert('Error removing student: ' + error.message);
+        }
+    }
+
+    async exportData() {
+        try {
+            const response = await fetch('/api/data/export');
+            if (!response.ok) throw new Error('Export failed');
+
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gvp-students-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            alert('Data exported successfully!');
+        } catch (error) {
+            alert('Export failed: ' + error.message);
+        }
+    }
+
+    async handleImportJson(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+
+            if (!Array.isArray(data)) {
+                throw new Error('Invalid JSON format. Expected an array of students.');
+            }
+
+            const response = await fetch('/api/data/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Import failed');
+            }
+
+            await this.loadData();
+            alert(`Import successful! ${result.imported} students imported.${result.errors.length > 0 ? '\n\nErrors: ' + result.errors.join('\n') : ''}`);
+        } catch (error) {
+            alert('Import failed: ' + error.message);
+        } finally {
+            event.target.value = ''; // Reset file input
+        }
+    }
+
+    async handleUploadCsv(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch('/api/data/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Upload failed');
+            }
+
+            await this.loadData();
+            alert(`CSV upload successful! ${result.imported} students imported.${result.errors.length > 0 ? '\n\nErrors:\n' + result.errors.join('\n') : ''}`);
+        } catch (error) {
+            alert('CSV upload failed: ' + error.message);
+        } finally {
+            event.target.value = ''; // Reset file input
         }
     }
 }
